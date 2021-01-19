@@ -1,6 +1,6 @@
 # Canvas-Syncer
 
-A script that let you sync your local files / ??? with canvas.
+A script that let you sync your local files with canvas.
 
 ## Usage
 
@@ -17,7 +17,7 @@ You can use `canvassyncer -h` to get help.
 
 Optional arguments:
 
-```bash
+```
   -h, --help            show this help message and exit
   -r                    recreate config file
   -y                    confirm all prompts
