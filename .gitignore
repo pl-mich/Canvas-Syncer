@@ -20,3 +20,5 @@ courses/
 upload.sh
 dist.py
 *.spec
+
+accesstoken
