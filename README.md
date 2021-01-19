@@ -38,3 +38,5 @@ You may also refer to <https://github.com/tc-imba/canvas-auto-rubric#generate-ke
 ## Contribution
 
 Please feel free to create issues and pull requests.
+
+> If you REALLY feel bored during this semester, just remember that there still THIS crap to work on
