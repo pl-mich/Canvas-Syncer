@@ -1,3 +1,7 @@
+'''
+TODO: Implement logging functions, with both console outputs and file outputs.
+'''
+
 import argparse
 import json
 import os
@@ -339,15 +343,15 @@ class CanvasSyncer:
         return res
 
     def checkNewFiles(self):
-        print("\rFinding files on canvas...", end='')
+        print("\rFinding files on Canvas...", end='')
         allInfos = []
         for courseID in self.courseCode.keys():
             for info in self.getCourseTaskInfo(courseID):
                 allInfos.append(info)
         if len(allInfos) == 0:
-            print("\rAll local files are synced!")
+            print("\rAll local files are up to date!")
         else:
-            print(f"\rFind {len(allInfos)} new files!           ")
+            print(f"\rFound {len(allInfos)} new files!           ")
             if self.skipfiles:
                 print(
                     f"The following file(s) will not be synced due to their size (over {self.config['filesizeThresh']} MB):"
@@ -364,7 +368,7 @@ class CanvasSyncer:
     def checkLaterFiles(self):
         if not self.laterFiles:
             return
-        print("These file(s) have later version on canvas:")
+        print("These file(s) have later version on Canvas:")
         [print(s) for s in self.laterInfo]
         if not self.confirmAll:
             print('Update all?(Y/n) ', end='')
@@ -399,7 +403,7 @@ class CanvasSyncer:
     def sync(self):
         print("\rGetting course IDs...", end='')
         self.courseCode = self.getCourseID()
-        print(f"\rGet {len(self.courseCode)} available courses!")
+        print(f"\rGot {len(self.courseCode)} available courses!")
         self.checkNewFiles()
         self.checkLaterFiles()
 
@@ -411,9 +415,9 @@ def initConfig():
     elif os.path.exists("./canvassyncer.json"):
         oldConfig = json.load(open("./canvassyncer.json"))
     print("Generating new config file...")
-    url = input("Canvas url(Default: https://umjicanvas.com):").strip()
+    url = input("Canvas URL (Default: https://umich.instructure.com):").strip()
     if not url:
-        url = "https://umjicanvas.com"
+        url = "https://umich.instructure.com"
     tipStr = f"(Default: {oldConfig.get('token', '')})" if oldConfig else ""
     token = input(f"Canvas access token{tipStr}:").strip()
     if not token:
@@ -432,7 +436,7 @@ def initConfig():
         courseIDs = oldConfig.get('courseIDs', list())
     courseIDs = [int(courseID) for courseID in courseIDs]
     tipStr = f"(Default: {oldConfig.get('downloadDir', os.path.abspath(''))})"
-    downloadDir = input(f"Path to save canvas files{tipStr}:").strip()
+    downloadDir = input(f"Path to save Canvas files{tipStr}:").strip()
     if not downloadDir:
         downloadDir = oldConfig.get('downloadDir', os.path.abspath(''))
     tipStr = f"(Default: {oldConfig.get('filesizeThresh', '')})" if oldConfig else f"(Default: 250)"
