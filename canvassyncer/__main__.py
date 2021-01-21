@@ -12,6 +12,7 @@ import requests.exceptions
 import threading
 import time
 import urllib3.exceptions
+
 from datetime import timezone, datetime
 from functools import partial
 from queue import Queue
@@ -21,6 +22,11 @@ from urllib3.util.retry import Retry
 from tqdm import tqdm
 import ntpath
 
+# Modules for logging and parsing config.ini data
+import logging
+import logging.config
+import configparser
+
 __version__ = "1.2.10"
 CONFIG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                            ".canvassyncer.json")
@@ -29,6 +35,11 @@ _sentinel = object()
 
 print = partial(print, flush=True)
 
+def process(s):
+    '''Process the filename as input string s to ensure that it adheres to 
+    Windows file naming requirements.'''
+    if len(s) > 240: s = s[0,240]
+    return ''.join(re.split('[\\/:"*?<>|]+', s.strip()))
 
 class MultithreadDownloader:
     blockSize = 512
@@ -143,6 +154,7 @@ class MultithreadDownloader:
 
 class CanvasSyncer:
     def __init__(self, config):
+        logger.debug("Initiated CanvasSyncer object.")
         self.confirmAll = config['y']
         self.config = config
         self.sess = requests.Session()
@@ -166,8 +178,10 @@ class CanvasSyncer:
         self.downloader = MultithreadDownloader(self.sess, MAX_DOWNLOAD_COUNT)
         if not os.path.exists(self.downloadDir):
             os.mkdir(self.downloadDir)
+            logger.info(f"Created new directory at {downloadDir}.")
 
     def sessGet(self, *args, **kwargs):
+        logger.debug("Method CanvasSyncer.sessGet called.")
         if kwargs.get('timeout') is None:
             kwargs['timeout'] = 10
         if kwargs.get('header') is None:
@@ -181,6 +195,7 @@ class CanvasSyncer:
             raise ConnectionError(e)
 
     def sessHead(self, *args, **kwargs):
+        logger.debug("Method CanvasSyncer.sessHead called.")
         if kwargs.get('timeout') is None:
             kwargs['timeout'] = 10
         if kwargs.get('header') is None:
@@ -195,15 +210,19 @@ class CanvasSyncer:
 
     def createFolders(self, courseID, folders):
         for folder in folders.values():
+            folder = os.path.normpath(folder)
             if self.config['no_subfolder']:
-                path = os.path.join(self.downloadDir, folder[1:])
+                folder_path = process(folder[1:])
+                path = os.path.join(self.downloadDir, folder_path)
             else:
-                path = os.path.join(self.downloadDir,
-                                    f"{self.courseCode[courseID]}{folder}")
+                folder_path = process(f"{self.courseCode[courseID]}{folder}")
+                path = os.path.join(self.downloadDir, folder_path)
             if not os.path.exists(path):
                 os.makedirs(path)
+                logger.info(f"Created folder at {path}.")
 
     def getLocalFiles(self, courseID, folders):
+        logger.debug('Method CanvasSyncer.getLocalFiles called.')
         localFiles = []
         for folder in folders.values():
             if self.config['no_subfolder']:
@@ -219,10 +238,12 @@ class CanvasSyncer:
         return localFiles
 
     def getCourseFolders(self, courseID):
-        return [
+        folder_list = [
             folder
             for folder in self.getCourseFoldersWithID(courseID).values()
         ]
+        logger.debug(str(folder_list))
+        return folder_list
 
     def getCourseFoldersWithID(self, courseID):
         res = {}
@@ -231,6 +252,7 @@ class CanvasSyncer:
             url = f"{self.baseurl}/courses/{courseID}/folders?page={page}"
             folders = self.sessGet(url).json()
             if not folders:
+                logger.error(f"Error reading folders list at {folders}.")
                 break
             for folder in folders:
                 res[folder['id']] = folder['full_name'].replace(
@@ -250,8 +272,8 @@ class CanvasSyncer:
                 break
             for f in files:
                 if f['folder_id'] not in folders.keys(): continue
-                f['display_name'] = re.sub(r"[\/\\\:\*\?\"\<\>\|]", "_",
-                                           f['display_name'])
+                # f['display_name'] = re.sub(r"[\/\\\:\*\?\"\<\>\|]", "_", f['display_name'])
+                f['display_name'] = process(f['display_name'])
                 path = f"{folders[f['folder_id']]}/{f['display_name']}"
                 path = path.replace('\\', '/').replace('//', '/')
                 dt = datetime.strptime(f["modified_at"], "%Y-%m-%dT%H:%M:%SZ")
@@ -262,6 +284,7 @@ class CanvasSyncer:
 
     def getCourseCode(self, courseID):
         url = f"{self.baseurl}/courses/{courseID}"
+        logger.debug(f"Retrieving course code at {url}.")
         return self.sessGet(url).json()['course_code']
 
     def getCourseID(self):
@@ -276,6 +299,7 @@ class CanvasSyncer:
                     errMsg = courses['errors'][0].get('message',
                                                       'unknown error.')
                     print(f"\nError: {errMsg}")
+                    logger.error(errMsg)
                     exit(1)
                 if not courses:
                     break
@@ -289,6 +313,7 @@ class CanvasSyncer:
         if self.config.get('courseIDs'):
             for courseID in self.config['courseIDs']:
                 res[courseID] = self.getCourseCode(courseID)
+        logger.debug(str(res))
         return res
 
     def getCourseTaskInfo(self, courseID):
@@ -331,7 +356,8 @@ class CanvasSyncer:
                     )
                     isDownload = 'Y'
                 if isDownload not in ['n', 'N']:
-                    print('Creating empty file as scapegoat...')
+                    logger.warning(f"Ignoring file {self.courseCode[courseID]}{fileName} due to large size. Empty placeholder file created.")
+                    print('Creating empty file as placeholder...')
                     open(path, 'w').close()
                     self.skipfiles.append(path)
                     continue
@@ -350,17 +376,21 @@ class CanvasSyncer:
                 allInfos.append(info)
         if len(allInfos) == 0:
             print("\rAll local files are up to date!")
+            logger.info("All files up to date.")
         else:
             print(f"\rFound {len(allInfos)} new files!           ")
+            logger.info("Found {len(allInfos)} new files!")
             if self.skipfiles:
                 print(
                     f"The following file(s) will not be synced due to their size (over {self.config['filesizeThresh']} MB):"
                 )
                 [print(f) for f in self.skipfiles]
+                logger.info(f"Skipped files {str(self.skipfiles)}")
             print(
                 f"Start to download following files! Total size: {round(self.downloadSize / 2**20, 2)}MB"
             )
             [print(s) for s in self.newInfo]
+            logger.info(f"File downloading started. Files list: {str(self.newInfo)}")
             self.downloader.create(allInfos, self.downloadSize)
             self.downloader.start()
             self.downloader.waitTillFinish()
@@ -370,12 +400,14 @@ class CanvasSyncer:
             return
         print("These file(s) have later version on Canvas:")
         [print(s) for s in self.laterInfo]
+        logger.info(f"Found new versions for files {self.laterInfo}")
         if not self.confirmAll:
             print('Update all?(Y/n) ', end='')
             isDownload = input()
         else:
             isDownload = 'Y'
         if isDownload in ['n', 'N']:
+            logger.info("Update aborted.")
             return
         print(
             f"Start to download these files! Total size: {round(self.laterDownloadSize / 2**20, 2)}MB"
@@ -396,6 +428,7 @@ class CanvasSyncer:
                 laterFiles.append((fileUrl, path))
             except Exception as e:
                 print(f"{e.__class__.__name__}! Skipped: {path}")
+                logger.error(f"{e.__class__.__name__}! Skipped: {path}")
         self.downloader.create(laterFiles, self.laterDownloadSize)
         self.downloader.start()
         self.downloader.waitTillFinish()
@@ -403,9 +436,12 @@ class CanvasSyncer:
     def sync(self):
         print("\rGetting course IDs...", end='')
         self.courseCode = self.getCourseID()
+        logger.info(str(self.courseCode))
         print(f"\rGot {len(self.courseCode)} available courses!")
         self.checkNewFiles()
+        logger.info("Finished checking for new files.")
         self.checkLaterFiles()
+        logger.info("Finished checking for new versions of existing files.")
 
 
 def initConfig():
@@ -493,13 +529,15 @@ def run():
         configPath = args.path
         if args.r or not os.path.exists(configPath):
             if not os.path.exists(configPath):
-                print('Config file not exist, creating...')
+                print('Config file does not exist, creating...')
+                logger.warning(
+                    f'Config file does not exist, creating new one at {configPath}')
             try:
                 initConfig()
             except Exception as e:
                 print(
-                    f"\nError: {e.__class__.__name__}. Failed to create config file."
-                )
+                    f"\nError: {e.__class__.__name__}. Failed to create config file.")
+                logger.critical("Failed to create config file", exc_info=True)
                 if args.debug:
                     print(traceback.format_exc())
                 exit(1)
@@ -513,13 +551,14 @@ def run():
         Syncer.sync()
     except ConnectionError as e:
         print("\nConnection Error. Please check your network and your token!")
+        logger.critical("Connection error!", exc_info=True)
         if args.debug:
             print(traceback.format_exc())
         exit(1)
     except Exception as e:
         print(
-            f"\nUnexpected Error: {e.__class__.__name__}. Please check your network and your token!"
-        )
+            f"\nUnexpected Error: {e.__class__.__name__}. Please check your network and your token!")
+        logger.critical("Unexpected error!", exc_info=True)
         if args.debug:
             print(traceback.format_exc())
     except KeyboardInterrupt as e:
@@ -529,4 +568,7 @@ def run():
 
 
 if __name__ == "__main__":
+    logging.config.fileConfig("config.ini")
+    logger = logging.getLogger("root")
+    logger.info("Program initiated.")
     run()
