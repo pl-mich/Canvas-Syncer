@@ -30,19 +30,22 @@ import configparser
 __version__ = "1.2.10"
 CONFIG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                            ".canvassyncer.json")
-MAX_DOWNLOAD_COUNT = 8
+MAX_DOWNLOAD_COUNT = 64 # Used to be 8
 _sentinel = object()
 
 print = partial(print, flush=True)
 
 def process(s):
-    '''Process the filename as input string s to ensure that it adheres to 
-    Windows file naming requirements.'''
+    '''Process the file name as input string s to ensure that it adheres to 
+    Windows file naming requirements. 
+    TODO: Implement checks for forward and backward slashes.'''
     if len(s) > 240: s = s[0,240]
-    return ''.join(re.split('[\\/:"*?<>|]+', s.strip()))
+    return ''.join(re.split('[:"*?<>|]+', s.strip()))
+
 
 class MultithreadDownloader:
-    blockSize = 512
+    # blockSize = 512
+    blockSize = 1024
 
     def __init__(self, session, maxThread):
         self.sess = session
@@ -68,11 +71,10 @@ class MultithreadDownloader:
             self.currentDownload[i] = dst.split('/')[-1].split('\\')[-1]
             tmpFilePath = ''
             try:
-                r = self.sess.get(src, timeout=10, stream=True)
+                r = self.sess.get(src, timeout=50, stream=True) # timeout used to be 10
                 tmpFilePath = f"{dst}.tmp.{int(time.time())}"
                 with open(tmpFilePath, 'wb') as fd:
-                    for chunk in r.iter_content(
-                            MultithreadDownloader.blockSize):
+                    for chunk in r.iter_content(MultithreadDownloader.blockSize):
                         self.tqdm.update(len(chunk))
                         fd.write(chunk)
                         if self.stopSignal:
@@ -81,6 +83,7 @@ class MultithreadDownloader:
             except Exception as e:
                 print(
                     f"\nError: {e.__class__.__name__}. Download {dst} fails!")
+                logger.error("Download failed!", exc_info=True)
             finally:
                 if os.path.exists(tmpFilePath):
                     os.remove(tmpFilePath)
@@ -168,7 +171,7 @@ class CanvasSyncer:
         self.laterDownloadSize = 0
         self.courseCode = {}
         self.baseurl = self.config['canvasURL'] + '/api/v1'
-        self.downloadDir = self.config['downloadDir']
+        self.downloadDir = os.path.normpath(self.config['downloadDir'] + "\\")
         self.newInfo = []
         self.laterFiles = []
         self.laterInfo = []
@@ -179,6 +182,7 @@ class CanvasSyncer:
         if not os.path.exists(self.downloadDir):
             os.mkdir(self.downloadDir)
             logger.info(f"Created new directory at {downloadDir}.")
+        logger.debug(f"CanvasSyncer.downloadDir = {self.downloadDir}")
 
     def sessGet(self, *args, **kwargs):
         logger.debug("Method CanvasSyncer.sessGet called.")
@@ -210,13 +214,16 @@ class CanvasSyncer:
 
     def createFolders(self, courseID, folders):
         for folder in folders.values():
+            logger.debug(f"CanvasSyncer.createFolders.folder = {folder}")
             folder = os.path.normpath(folder)
             if self.config['no_subfolder']:
-                folder_path = process(folder[1:])
+                folder_path = folder[1:]
                 path = os.path.join(self.downloadDir, folder_path)
+                logger.debug(f"CanvasSyncer.createFolders.path = {path}")
             else:
-                folder_path = process(f"{self.courseCode[courseID]}{folder}")
+                folder_path = f"{self.courseCode[courseID]}{folder}"
                 path = os.path.join(self.downloadDir, folder_path)
+                logger.debug(f"CanvasSyncer.createFolders.path = {path}")
             if not os.path.exists(path):
                 os.makedirs(path)
                 logger.info(f"Created folder at {path}.")
@@ -235,6 +242,7 @@ class CanvasSyncer:
                 for f in os.listdir(path)
                 if not os.path.isdir(os.path.join(path, f))
             ]
+        logger.debug(f"CanvasSyncer.getLocalFiles.localFiles = {localFiles}")
         return localFiles
 
     def getCourseFolders(self, courseID):
@@ -242,7 +250,6 @@ class CanvasSyncer:
             folder
             for folder in self.getCourseFoldersWithID(courseID).values()
         ]
-        logger.debug(str(folder_list))
         return folder_list
 
     def getCourseFoldersWithID(self, courseID):
@@ -252,14 +259,19 @@ class CanvasSyncer:
             url = f"{self.baseurl}/courses/{courseID}/folders?page={page}"
             folders = self.sessGet(url).json()
             if not folders:
-                logger.error(f"Error reading folders list at {folders}.")
+                logger.error(f"Error reading folders list at {url}.")
                 break
             for folder in folders:
                 res[folder['id']] = folder['full_name'].replace(
                     "course files", "")
                 if not res[folder['id']]:
                     res[folder['id']] = '/'
+                res[folder['id']] = process(res[folder['id']])
+                logger.debug(
+                    f"CanvasSyncer.getCourseFoldersWithID.res[folder['id']] = {res[folder['id']]}")
             page += 1
+        # logger.debug(f"CanvasSyncer.getCourseFoldersWithID.res = {res}")
+
         return res
 
     def getCourseFiles(self, courseID):
@@ -276,6 +288,7 @@ class CanvasSyncer:
                 f['display_name'] = process(f['display_name'])
                 path = f"{folders[f['folder_id']]}/{f['display_name']}"
                 path = path.replace('\\', '/').replace('//', '/')
+                logger.debug(f"{f['folder_id']}.path = {path}")
                 dt = datetime.strptime(f["modified_at"], "%Y-%m-%dT%H:%M:%SZ")
                 modifiedTimeStamp = dt.replace(tzinfo=timezone.utc).timestamp()
                 res[path] = (f["url"], int(modifiedTimeStamp))
@@ -284,7 +297,7 @@ class CanvasSyncer:
 
     def getCourseCode(self, courseID):
         url = f"{self.baseurl}/courses/{courseID}"
-        logger.debug(f"Retrieving course code at {url}.")
+        logger.info(f"Retrieving course code at {url}.")
         return self.sessGet(url).json()['course_code']
 
     def getCourseID(self):
@@ -313,7 +326,6 @@ class CanvasSyncer:
         if self.config.get('courseIDs'):
             for courseID in self.config['courseIDs']:
                 res[courseID] = self.getCourseCode(courseID)
-        logger.debug(str(res))
         return res
 
     def getCourseTaskInfo(self, courseID):
@@ -436,7 +448,7 @@ class CanvasSyncer:
     def sync(self):
         print("\rGetting course IDs...", end='')
         self.courseCode = self.getCourseID()
-        logger.info(str(self.courseCode))
+        logger.info(f"CanvasSyncer.courseCode = {str(self.courseCode)}")
         print(f"\rGot {len(self.courseCode)} available courses!")
         self.checkNewFiles()
         logger.info("Finished checking for new files.")
@@ -571,4 +583,5 @@ if __name__ == "__main__":
     logging.config.fileConfig("config.ini")
     logger = logging.getLogger("root")
     logger.info("Program initiated.")
+    logger.info(f"Path for json configuration: {CONFIG_PATH}")
     run()

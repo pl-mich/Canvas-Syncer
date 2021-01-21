@@ -1,63 +1,12 @@
-[INFO] [18:11:20] Program initiated.
-[DEBUG] [18:11:20] Initiated CanvasSyncer object.
-[DEBUG] [18:11:20] Retrieving course code at https://umich.instructure.com/api/v1/courses/410407.
-[DEBUG] [18:11:20] Method CanvasSyncer.sessGet called.
-[DEBUG] [18:11:21] Retrieving course code at https://umich.instructure.com/api/v1/courses/406738.
-[DEBUG] [18:11:21] Method CanvasSyncer.sessGet called.
-[DEBUG] [18:11:21] Retrieving course code at https://umich.instructure.com/api/v1/courses/405589.
-[DEBUG] [18:11:21] Method CanvasSyncer.sessGet called.
-[DEBUG] [18:11:22] Retrieving course code at https://umich.instructure.com/api/v1/courses/429748.
-[DEBUG] [18:11:22] Method CanvasSyncer.sessGet called.
-[DEBUG] [18:11:22] {410407: 'EECS 203 Winter 2021', 406738: 'EECS 280 WN 2021', 405589: 'IOE 265 100 WN 2021', 429748: 'IOE Data Analytics Help Desk'}
-[INFO] [18:11:22] {410407: 'EECS 203 Winter 2021', 406738: 'EECS 280 WN 2021', 405589: 'IOE 265 100 WN 2021', 429748: 'IOE Data Analytics Help Desk'}
-[DEBUG] [18:11:22] Method CanvasSyncer.sessGet called.
-[DEBUG] [18:11:22] Method CanvasSyncer.sessGet called.
-[ERROR] [18:11:23] Error reading folders list at [].
-[DEBUG] [18:11:23] Method CanvasSyncer.sessGet called.
-[DEBUG] [18:11:23] Method CanvasSyncer.sessGet called.
-[DEBUG] [18:11:24] Method CanvasSyncer.sessGet called.
-[DEBUG] [18:11:24] Method CanvasSyncer.getLocalFiles called.
-[DEBUG] [18:11:24] Method CanvasSyncer.sessHead called.
-[DEBUG] [18:11:24] Method CanvasSyncer.sessHead called.
-[DEBUG] [18:11:25] Method CanvasSyncer.sessGet called.
-[DEBUG] [18:11:25] Method CanvasSyncer.sessGet called.
-[ERROR] [18:11:25] Error reading folders list at [].
-[DEBUG] [18:11:25] Method CanvasSyncer.sessGet called.
-[DEBUG] [18:11:26] Method CanvasSyncer.sessGet called.
-[DEBUG] [18:11:26] Method CanvasSyncer.getLocalFiles called.
-[DEBUG] [18:11:26] Method CanvasSyncer.sessGet called.
-[DEBUG] [18:11:26] Method CanvasSyncer.sessGet called.
-[ERROR] [18:11:27] Error reading folders list at [].
-[DEBUG] [18:11:27] Method CanvasSyncer.sessGet called.
-[DEBUG] [18:11:27] Method CanvasSyncer.sessGet called.
-[DEBUG] [18:11:27] Method CanvasSyncer.getLocalFiles called.
-[DEBUG] [18:11:27] Method CanvasSyncer.sessGet called.
-[DEBUG] [18:11:28] Method CanvasSyncer.sessGet called.
-[DEBUG] [18:11:28] Method CanvasSyncer.sessGet called.
-[ERROR] [18:11:28] Error reading folders list at [].
-[DEBUG] [18:11:28] Method CanvasSyncer.sessGet called.
-[DEBUG] [18:11:29] Method CanvasSyncer.sessGet called.
-[DEBUG] [18:11:29] Method CanvasSyncer.sessGet called.
-[INFO] [18:11:30] Created folder at E:IOE Data Analytics Help Desk\Python\Tutorials\ENGR 101_C++ - Python Guide.
-[INFO] [18:11:30] Created folder at E:IOE Data Analytics Help Desk\Python\Tutorials\Google Colaboratory Walkthrough.
-[INFO] [18:11:30] Created folder at E:IOE Data Analytics Help Desk\Python\Tutorials\Intro Python Debugging.
-[INFO] [18:11:30] Created folder at E:IOE Data Analytics Help Desk\Python\Tutorials\Pyomo Basics.
-[INFO] [18:11:30] Created folder at E:IOE Data Analytics Help Desk\Python\Tutorials\Python Basics I - Program Flow.
-[INFO] [18:11:30] Created folder at E:IOE Data Analytics Help Desk\Python\Tutorials\Python Basics I - Variables.
-[INFO] [18:11:30] Created folder at E:IOE Data Analytics Help Desk\R.
-[INFO] [18:11:30] Created folder at E:IOE Data Analytics Help Desk\R\Tutorials\Tutorial 1 Basics.
-[INFO] [18:11:30] Created folder at E:IOE Data Analytics Help Desk\R\Tutorials\Tutorial 2 Data Structures.
-[DEBUG] [18:11:30] Method CanvasSyncer.getLocalFiles called.
-[CRITICAL] [18:11:30] Unexpected error!
-Traceback (most recent call last):
-  File "c:\Users\Li Jun\Documents\GitHub\Canvas-Syncer\canvassyncer\__main__.py", line 551, in run
-    Syncer.sync()
-  File "c:\Users\Li Jun\Documents\GitHub\Canvas-Syncer\canvassyncer\__main__.py", line 441, in sync
-    self.checkNewFiles()
-  File "c:\Users\Li Jun\Documents\GitHub\Canvas-Syncer\canvassyncer\__main__.py", line 375, in checkNewFiles
-    for info in self.getCourseTaskInfo(courseID):
-  File "c:\Users\Li Jun\Documents\GitHub\Canvas-Syncer\canvassyncer\__main__.py", line 322, in getCourseTaskInfo
-    localFiles = self.getLocalFiles(courseID, folders)
-  File "c:\Users\Li Jun\Documents\GitHub\Canvas-Syncer\canvassyncer\__main__.py", line 235, in getLocalFiles
-    for f in os.listdir(path)
-OSError: [WinError 123] 文件名、目录名或卷标语法不正确。: 'E:IOE Data Analytics Help Desk/Python/Tutorials/ENGR 101_C++ -> Python Guide'
+[INFO] [20:40:03] Program initiated.
+[INFO] [20:40:03] Path for json configuration: c:\Users\Li Jun\Documents\GitHub\Canvas-Syncer\canvassyncer\.canvassyncer.json
+[INFO] [20:40:03] Retrieving course code at https://umich.instructure.com/api/v1/courses/410407.
+[INFO] [20:40:04] Retrieving course code at https://umich.instructure.com/api/v1/courses/406738.
+[INFO] [20:40:04] Retrieving course code at https://umich.instructure.com/api/v1/courses/405589.
+[INFO] [20:40:05] CanvasSyncer.courseCode = {410407: 'EECS 203 Winter 2021', 406738: 'EECS 280 WN 2021', 405589: 'IOE 265 100 WN 2021'}
+[ERROR] [20:40:05] Error reading folders list at https://umich.instructure.com/api/v1/courses/410407/folders?page=2.
+[ERROR] [20:40:07] Error reading folders list at https://umich.instructure.com/api/v1/courses/406738/folders?page=2.
+[ERROR] [20:40:09] Error reading folders list at https://umich.instructure.com/api/v1/courses/405589/folders?page=2.
+[INFO] [20:40:09] All files up to date.
+[INFO] [20:40:09] Finished checking for new files.
+[INFO] [20:40:09] Finished checking for new versions of existing files.
