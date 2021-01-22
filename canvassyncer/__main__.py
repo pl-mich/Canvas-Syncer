@@ -352,10 +352,12 @@ class CanvasSyncer:
         return res
 
     def getCourseTaskInfo(self, courseID):
+        
         folders, files = self.getCourseFiles(courseID)
         self.createFolders(courseID, folders)
         localFiles = self.getLocalFiles(courseID, folders)
         res = []
+        
         for fileName, (fileUrl, fileModifiedTimeStamp) in files.items():
             if not fileUrl:
                 continue
@@ -365,6 +367,7 @@ class CanvasSyncer:
                 path = os.path.join(self.downloadDir,
                                     f"{self.courseCode[courseID]}{fileName}")
             path = path.replace('\\', '/').replace('//', '/')
+            
             if fileName in localFiles:
                 localCreatedTimeStamp = int(os.path.getctime(path))
                 if fileModifiedTimeStamp <= localCreatedTimeStamp:
@@ -377,6 +380,7 @@ class CanvasSyncer:
                     f"{self.courseCode[courseID]}{fileName} ({round(fileSize / 2**20, 2)}MB)"
                 )
                 continue
+            
             response = self.sessHead(fileUrl)
             fileSize = int(response.headers.get('content-length', 0))
             if fileSize / 2**20 > self.config['filesizeThresh']:
@@ -390,12 +394,14 @@ class CanvasSyncer:
                         f'\nTarget file: {self.courseCode[courseID]}{fileName} is too large ({round(fileSize / 2**20, 2)}MB), ignore. '
                     )
                     isDownload = 'Y'
+                
                 if isDownload not in ['n', 'N']:
                     logger.warning(f"Ignoring file {self.courseCode[courseID]}{fileName} due to large size. Empty placeholder file created.")
                     print('Creating empty file as placeholder...')
                     open(path, 'w').close()
                     self.skipfiles.append(path)
                     continue
+
             self.newInfo.append(
                 f"{self.courseCode[courseID]}{fileName} ({round(fileSize / 2**20, 2)}MB)"
             )
@@ -404,46 +410,59 @@ class CanvasSyncer:
         return res
 
     def checkNewFiles(self):
+
         print("\rFinding files on Canvas...", end='')
         allInfos = []
+
         for courseID in self.courseCode.keys():
             for info in self.getCourseTaskInfo(courseID):
                 allInfos.append(info)
+        
         if len(allInfos) == 0:
             print("\rAll local files are up to date!")
             logger.info("All files up to date.")
         else:
             print(f"\rFound {len(allInfos)} new files!           ")
             logger.info("Found {len(allInfos)} new files!")
+            
             if self.skipfiles:
                 print(
                     f"The following file(s) will not be synced due to their size (over {self.config['filesizeThresh']} MB):"
                 )
                 [print(f) for f in self.skipfiles]
                 logger.info(f"Skipped files {str(self.skipfiles)}")
+            
             print(
                 f"Start to download following files! Total size: {round(self.downloadSize / 2**20, 2)}MB"
             )
             [print(s) for s in self.newInfo]
             logger.info(f"File downloading started. Files list: {str(self.newInfo)}")
+            
             self.downloader.create(allInfos, self.downloadSize)
             self.downloader.start()
             self.downloader.waitTillFinish()
 
     def checkLaterFiles(self):
+
+        '''Check for new versions of existing files on Canvas'''
+
         if not self.laterFiles:
             return
+
         print("These file(s) have later version on Canvas:")
         [print(s) for s in self.laterInfo]
         logger.info(f"Found new versions for files {self.laterInfo}")
+        
         if not self.confirmAll:
             print('Update all?(Y/n) ', end='')
             isDownload = input()
         else:
             isDownload = 'Y'
+        
         if isDownload in ['n', 'N']:
             logger.info("Update aborted.")
             return
+
         print(
             f"Start to download these files! Total size: {round(self.laterDownloadSize / 2**20, 2)}MB"
         )
@@ -476,6 +495,8 @@ class CanvasSyncer:
         self.downloader.waitTillFinish()
 
     def sync(self):
+        '''Main function for checking for new or updated versions of files.'''
+        
         print("\rGetting course IDs...", end='')
         self.courseCode = self.getCourseID()
         logger.info(f"CanvasSyncer.courseCode = {str(self.courseCode)}")
@@ -488,8 +509,7 @@ class CanvasSyncer:
 
 def initConfig():
 
-    '''Create new `.canvassyncer.json` file, with values to properties based on
-    user input.'''
+    '''Create new `.canvassyncer.json` file, with values to properties based on user input.'''
 
     oldConfig = dict()
 
