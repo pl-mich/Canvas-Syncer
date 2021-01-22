@@ -1,5 +1,6 @@
 '''
-TODO: Implement logging functions, with both console outputs and file outputs.
+TODO: Implement one JSON configuration file for both the logger and the program itself.
+TODO: Revise documentation and code formatting.
 '''
 
 import argparse
@@ -22,15 +23,37 @@ from urllib3.util.retry import Retry
 from tqdm import tqdm
 import ntpath
 
-# Modules for logging and parsing config.ini data
+# Modules for logging
 import logging
 import logging.config
-import configparser
 
-__version__ = "1.2.10"
+__version__ = "1.3.1"
 CONFIG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                            ".canvassyncer.json")
 MAX_DOWNLOAD_COUNT = 64 # Used to be 8
+LOGGER_CONFIG = {
+                "version": 1,
+                "formatters": {
+                    "simpleFormatter": {
+                        "class": "logging.Formatter",
+                        "format": "[%(levelname)s] [%(asctime)s] %(message)s",
+                        "datefmt": "%H:%M:%S"
+                    }
+                },
+                "handlers": {
+                    "fileHandler": {
+                        "class": "logging.FileHandler",
+                        "formatter": "simpleFormatter",
+                        "filename": "canvas.log",
+                        "mode": "w"
+                    }
+                },
+                "loggers": {},
+                "root": {
+                    "level": "DEBUG",
+                    "handlers": ["fileHandler"]
+                },
+            }
 _sentinel = object()
 
 print = partial(print, flush=True)
@@ -424,13 +447,18 @@ class CanvasSyncer:
         print(
             f"Start to download these files! Total size: {round(self.laterDownloadSize / 2**20, 2)}MB"
         )
+        
         laterFiles = []
+        
         for (fileUrl, path) in self.laterFiles:
+            
             localCreatedTimeStamp = int(os.path.getctime(path))
+            
             try:
                 newPath = os.path.join(
                     ntpath.dirname(path),
                     f"{localCreatedTimeStamp}_{ntpath.basename(path)}")
+                
                 if not os.path.exists(newPath):
                     os.rename(path, newPath)
                 else:
@@ -438,9 +466,11 @@ class CanvasSyncer:
                         ntpath.dirname(path),
                         f"{int(time.time())}_{ntpath.basename(path)}")
                 laterFiles.append((fileUrl, path))
+            
             except Exception as e:
                 print(f"{e.__class__.__name__}! Skipped: {path}")
                 logger.error(f"{e.__class__.__name__}! Skipped: {path}")
+        
         self.downloader.create(laterFiles, self.laterDownloadSize)
         self.downloader.start()
         self.downloader.waitTillFinish()
@@ -449,7 +479,7 @@ class CanvasSyncer:
         print("\rGetting course IDs...", end='')
         self.courseCode = self.getCourseID()
         logger.info(f"CanvasSyncer.courseCode = {str(self.courseCode)}")
-        print(f"\rGot {len(self.courseCode)} available courses!")
+        print(f"\rFound {len(self.courseCode)} available courses!")
         self.checkNewFiles()
         logger.info("Finished checking for new files.")
         self.checkLaterFiles()
@@ -457,25 +487,34 @@ class CanvasSyncer:
 
 
 def initConfig():
+
+    '''Create new `.canvassyncer.json` file, with values to properties based on
+    user input.'''
+
     oldConfig = dict()
+
     if os.path.exists(CONFIG_PATH):
         oldConfig = json.load(open(CONFIG_PATH))
     elif os.path.exists("./canvassyncer.json"):
         oldConfig = json.load(open("./canvassyncer.json"))
     print("Generating new config file...")
+
     url = input("Canvas URL (Default: https://umich.instructure.com):").strip()
     if not url:
         url = "https://umich.instructure.com"
     tipStr = f"(Default: {oldConfig.get('token', '')})" if oldConfig else ""
+
     token = input(f"Canvas access token{tipStr}:").strip()
     if not token:
         token = oldConfig.get('token', '')
+
     tipStr = f"(Default: {' '.join(oldConfig.get('courseCodes', list()))})" if oldConfig else ""
     courseCodes = input(
         f"Courses to sync in course codes(split with space){tipStr}:").strip(
         ).split()
     if not courseCodes:
         courseCodes = oldConfig.get('courseCodes', list())
+    
     tipStr = f"(Default: {' '.join([str(item) for item in oldConfig.get('courseIDs', list())])})" if oldConfig else ""
     courseIDs = input(
         f"Courses to sync in course ID(split with space){tipStr}:").strip(
@@ -483,17 +522,22 @@ def initConfig():
     if not courseIDs:
         courseIDs = oldConfig.get('courseIDs', list())
     courseIDs = [int(courseID) for courseID in courseIDs]
+    
     tipStr = f"(Default: {oldConfig.get('downloadDir', os.path.abspath(''))})"
     downloadDir = input(f"Path to save Canvas files{tipStr}:").strip()
+
     if not downloadDir:
         downloadDir = oldConfig.get('downloadDir', os.path.abspath(''))
+
     tipStr = f"(Default: {oldConfig.get('filesizeThresh', '')})" if oldConfig else f"(Default: 250)"
     filesizeThresh = input(
         f"Maximum file size to download(MB){tipStr}:").strip()
+
     try:
         filesizeThresh = float(filesizeThresh)
     except:
         filesizeThresh = 250
+
     json.dump(
         {
             "canvasURL": url,
@@ -502,28 +546,32 @@ def initConfig():
             "courseIDs": courseIDs,
             "downloadDir": downloadDir,
             "filesizeThresh": filesizeThresh
-        },
-        open(CONFIG_PATH, mode='w', encoding='utf-8'),
-        indent=4)
+        }, open(CONFIG_PATH, mode='w', encoding='utf-8'), indent=4)
 
 
 def run():
+
+    ''' I really do not know whether this separate `run()` function is needed, but 
+    I'd assume it's necessary for building a package and releasing it later on...'''
+
     Syncer, args = None, None
+
     try:
+
         parser = argparse.ArgumentParser(
-            description='A Simple Canvas File Syncer')
+            description='Utility to sync course files from Canvas')
         parser.add_argument('-r',
                             help='recreate config file',
                             action="store_true")
         parser.add_argument('-y',
-                            help='confirm all prompts',
+                            help='confirm all yes/no prompts',
                             action="store_true")
         parser.add_argument('--no-subfolder',
-                            help='do not create a course code named subfolder when synchronizing files',
+                            help='do not create subfolders named after course codes when synchronizing files',
                             action="store_true")
         parser.add_argument('-p',
                             '--path',
-                            help='appoint config file path',
+                            help='assign path for the JSON config file',
                             default=CONFIG_PATH)
         parser.add_argument('-x',
                             '--proxy',
@@ -537,51 +585,69 @@ def run():
                             '--debug',
                             help='show debug information',
                             action="store_true")
+
         args = parser.parse_args()
         configPath = args.path
+
         if args.r or not os.path.exists(configPath):
+
             if not os.path.exists(configPath):
                 print('Config file does not exist, creating...')
                 logger.warning(
                     f'Config file does not exist, creating new one at {configPath}')
+
             try:
                 initConfig()
+
             except Exception as e:
                 print(
-                    f"\nError: {e.__class__.__name__}. Failed to create config file.")
-                logger.critical("Failed to create config file", exc_info=True)
+                    f"\nError: {e.__class__.__name__}. Failed to create or read config file.")
+                logger.critical("Failed to create or read config file", exc_info=True)
                 if args.debug:
                     print(traceback.format_exc())
                 exit(1)
+
             if args.r:
                 return
+        
         config = json.load(open(configPath, 'r', encoding='UTF-8'))
         config['y'] = args.y
         config['proxies'] = args.proxy
         config['no_subfolder'] = args.no_subfolder
+
         Syncer = CanvasSyncer(config)
         Syncer.sync()
+
     except ConnectionError as e:
         print("\nConnection Error. Please check your network and your token!")
         logger.critical("Connection error!", exc_info=True)
         if args.debug:
             print(traceback.format_exc())
         exit(1)
+
     except Exception as e:
         print(
             f"\nUnexpected Error: {e.__class__.__name__}. Please check your network and your token!")
         logger.critical("Unexpected error!", exc_info=True)
         if args.debug:
             print(traceback.format_exc())
+
     except KeyboardInterrupt as e:
         if Syncer:
             Syncer.downloader.stop()
+        logger.critical(str(e))
         exit(1)
 
 
 if __name__ == "__main__":
-    logging.config.fileConfig("config.ini")
-    logger = logging.getLogger("root")
-    logger.info("Program initiated.")
-    logger.info(f"Path for json configuration: {CONFIG_PATH}")
-    run()
+    try:
+        logging.config.dictConfig(LOGGER_CONFIG)
+        logger = logging.getLogger("root")
+        logger.info("Program initiated.")
+        logger.info(f"Path for json configuration: {CONFIG_PATH}")
+    except Exception as e:
+        print(e)
+        print(
+            "Logger failed to initiate! Please check existence and/or location of the config file")
+    finally:
+        run()
