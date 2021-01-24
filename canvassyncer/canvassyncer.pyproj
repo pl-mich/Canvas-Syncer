@@ -4,8 +4,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>a93f1f63-9da5-4195-999b-6abe0ac4f90f</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>
-    </StartupFile>
+    <StartupFile>__main__.py</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
@@ -24,6 +23,10 @@
   <ItemGroup>
     <Compile Include="__init__.py" />
     <Compile Include="__main__.py" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include=".canvassyncer.json" />
+    <Content Include="canvas.log" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
   <!-- Uncomment the CoreCompile target to enable the Build command in
