@@ -1,5 +1,4 @@
 '''
-TODO: Implement one JSON configuration file for both the logger and the program itself.
 TODO: Revise documentation and code formatting.
 '''
 
@@ -587,7 +586,7 @@ def run():
                             help='confirm all yes/no prompts',
                             action="store_true")
         parser.add_argument('--no-subfolder',
-                            help='do not create subfolders named after course codes when synchronizing files',
+                            help='does create subfolders named after course codes when synchronizing files',
                             action="store_true")
         parser.add_argument('-p',
                             '--path',
