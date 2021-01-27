@@ -104,7 +104,7 @@ class MultithreadDownloader:
                 os.rename(tmpFilePath, dst)
             except Exception as e:
                 print(
-                    f"\nError: {e.__class__.__name__}. Download {dst} fails!")
+                    f"\nError: {e.__class__.__name__}. Failed to download {dst}")
                 logger.error("Download failed!", exc_info=True)
             finally:
                 if os.path.exists(tmpFilePath):
