@@ -1,6 +1,6 @@
 # Canvas-Syncer
 
-A script that let you sync your local files with canvas.
+A script that lets you sync your local files with those under the "Files" tab of your course sites on [Canvas](https://umich.instructure.com).
 
 This forked version contains bug fixes, modifications to user input and output, as well as a logging function to facilitate futher debugging.
 
