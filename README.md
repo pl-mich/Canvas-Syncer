@@ -6,7 +6,7 @@ This forked version contains bug fixes, modifications to user input and output, 
 
 ## Usage
 
-__The following bash script would install the latest release version of the original BoYanZh/Canvas-Syncer from `pip`, instead of __
+**The following bash script would install the latest release version of the original BoYanZh/Canvas-Syncer from `pip`, instead of the version on this repository.**
 
 ```bash
 pip3 install canvassyncer
