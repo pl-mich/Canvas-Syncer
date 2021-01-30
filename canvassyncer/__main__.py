@@ -62,8 +62,7 @@ def process(s):
     Windows file naming requirements. 
     TODO: Implement checks for forward and backward slashes.'''
     if len(s) > 240: s = s[0,240]
-    return ''.join(re.split('[:"*?<>|]+', s.strip()))
-
+    return ''.join(re.split('\\[:"*?<>|]+', s.strip()))
 
 class MultithreadDownloader:
     # blockSize = 512
@@ -304,6 +303,7 @@ class CanvasSyncer:
             files = self.sessGet(url).json()
             if not files:
                 break
+            if type(files) is dict: break
             for f in files:
                 if f['folder_id'] not in folders.keys(): continue
                 # f['display_name'] = re.sub(r"[\/\\\:\*\?\"\<\>\|]", "_", f['display_name'])
