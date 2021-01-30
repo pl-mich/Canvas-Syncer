@@ -420,8 +420,8 @@ class CanvasSyncer:
             print("\rAll local files are up to date!")
             logger.info("All files up to date.")
         else:
-            print(f"\rFound {len(allInfos)} new files!           ")
-            logger.info("Found {len(allInfos)} new files!")
+            print(f"\rFound {len(allInfos)} new file(s)!           ")
+            logger.info("Found {len(allInfos)} new file(s)!")
             
             if self.skipfiles:
                 print(
@@ -431,10 +431,10 @@ class CanvasSyncer:
                 logger.info(f"Skipped files {str(self.skipfiles)}")
             
             print(
-                f"Start to download following files! Total size: {round(self.downloadSize / 2**20, 2)}MB"
+                f"Start to download following file(s)! Total size: {round(self.downloadSize / 2**20, 2)}MB"
             )
             [print(s) for s in self.newInfo]
-            logger.info(f"File downloading started. Files list: {str(self.newInfo)}")
+            logger.info(f"File downloading started. File(s) list: {str(self.newInfo)}")
             
             self.downloader.create(allInfos, self.downloadSize)
             self.downloader.start()
