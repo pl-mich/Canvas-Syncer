@@ -2,20 +2,22 @@
 
 A script that let you sync your local files with canvas.
 
+This forked version contains bug fixes, modifications to user input and output, as well as a logging function to facilitate futher debugging.
+
 ## Usage
+
+__The following bash script would install the latest release version of the original BoYanZh/Canvas-Syncer from `pip`, instead of __
 
 ```bash
 pip3 install canvassyncer
 canvassyncer
 ```
 
-Then input the information following the guide.
+Then follow the onscreen guide to provide your access token, course name or number, local file storage location, etc.
 
 If you have not installed `pip` yet, you may refer to <https://pip.pypa.io/en/stable/installing/> or the search engine to get your `pip`.
 
-You can use `canvassyncer -h` to get help.
-
-Optional arguments:
+### Optional arguments
 
 ```
   -h, --help            show this help message and exit
@@ -29,14 +31,14 @@ Optional arguments:
   -d, --debug           show debug information
 ```
 
-### How to get your token?
+### Canvas Access Token Generation
 
 Open Your Canvas-Account-Approved Integrations-New Access Token
 
 You may also refer to <https://github.com/tc-imba/canvas-auto-rubric#generate-key-access-token-on-canvas>
 
-## Contribution
+## Futher Contributions
 
 Please feel free to create issues and pull requests.
 
-> If you REALLY feel bored during this semester, just remember that there still THIS crap to work on
+> TODO: Compile source code into executable and publish it on either `pip` or the release page of this repository.
