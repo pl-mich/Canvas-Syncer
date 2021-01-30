@@ -59,10 +59,9 @@ print = partial(print, flush=True)
 
 def process(s):
     '''Process the file name as input string s to ensure that it adheres to 
-    Windows file naming requirements. 
-    TODO: Implement checks for forward and backward slashes.'''
+    Windows file naming requirements. '''
     if len(s) > 240: s = s[0,240]
-    return ''.join(re.split('\\[:"*?<>|]+', s.strip()))
+    return ''.join(re.split(r"[\\\:\*\?\"\<\>\|]", s.strip()))
 
 class MultithreadDownloader:
     # blockSize = 512
