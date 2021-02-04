@@ -431,7 +431,7 @@ class CanvasSyncer:
                 logger.info(f"Skipped files {str(self.skipfiles)}")
             
             print(
-                f"Start to download following file(s)! Total size: {round(self.downloadSize / 2**20, 2)}MB"
+                f"Start to download the following file(s), total size: {round(self.downloadSize / 2**20, 2)}MB"
             )
             [print(s) for s in self.newInfo]
             logger.info(f"File downloading started. File(s) list: {str(self.newInfo)}")
@@ -462,7 +462,7 @@ class CanvasSyncer:
             return
 
         print(
-            f"Start to download these files! Total size: {round(self.laterDownloadSize / 2**20, 2)}MB"
+            f"Start to download the following files, total size: {round(self.laterDownloadSize / 2**20, 2)}MB"
         )
         
         laterFiles = []
