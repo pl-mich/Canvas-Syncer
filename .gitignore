@@ -16,8 +16,10 @@ settings.json
 .canvassyncer.json
 .vscode
 .vs
+.idea
 __pycache__
 courses/
+venv/
 upload.sh
 dist.py
 *.spec
