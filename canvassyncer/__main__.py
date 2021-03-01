@@ -1,67 +1,67 @@
-'''
+"""
 TODO: Revise documentation and code formatting.
-'''
+"""
 
 import argparse
 import json
+# Modules for logging
+import logging.config
+import ntpath
 import os
 import re
-import traceback
-import requests
-import requests.exceptions
 import threading
 import time
-import urllib3.exceptions
-
+import traceback
 from datetime import timezone, datetime
 from functools import partial
 from queue import Queue
-from requests.adapters import HTTPAdapter
 from threading import Thread
-from urllib3.util.retry import Retry
-from tqdm import tqdm
-import ntpath
 
-# Modules for logging
-import logging
-import logging.config
+import requests
+import requests.exceptions
+import urllib3.exceptions
+from requests.adapters import HTTPAdapter
+from tqdm import tqdm
+from urllib3.util.retry import Retry
 
 __version__ = "1.3.1"
 CONFIG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                            ".canvassyncer.json")
-MAX_DOWNLOAD_COUNT = 64 # Used to be 8
+MAX_DOWNLOAD_COUNT = 64  # Used to be 8
 LOGGER_CONFIG = {
-                "version": 1,
-                "formatters": {
-                    "simpleFormatter": {
-                        "class": "logging.Formatter",
-                        "format": "[%(levelname)s] [%(asctime)s] %(message)s",
-                        "datefmt": "%H:%M:%S"
-                    }
-                },
-                "handlers": {
-                    "fileHandler": {
-                        "class": "logging.FileHandler",
-                        "formatter": "simpleFormatter",
-                        "filename": "canvas.log",
-                        "mode": "w"
-                    }
-                },
-                "loggers": {},
-                "root": {
-                    "level": "DEBUG",
-                    "handlers": ["fileHandler"]
-                },
-            }
+    "version": 1,
+    "formatters": {
+        "simpleFormatter": {
+            "class": "logging.Formatter",
+            "format": "[%(levelname)s] [%(asctime)s] %(message)s",
+            "datefmt": "%H:%M:%S"
+        }
+    },
+    "handlers": {
+        "fileHandler": {
+            "class": "logging.FileHandler",
+            "formatter": "simpleFormatter",
+            "filename": "canvas.log",
+            "mode": "w"
+        }
+    },
+    "loggers": {},
+    "root": {
+        "level": "DEBUG",
+        "handlers": ["fileHandler"]
+    },
+}
 _sentinel = object()
 
 print = partial(print, flush=True)
 
+
 def process(s):
-    '''Process the file name as input string s to ensure that it adheres to 
-    Windows file naming requirements. '''
-    if len(s) > 240: s = s[0,240]
+    """Process the file name as input string s to ensure that it adheres to
+    Windows file naming requirements. """
+    if len(s) > 240: s = s[0, 240]
     return ''.join(re.split(r"[\\\:\*\?\"\<\>\|]", s.strip()))
+
 
 class MultithreadDownloader:
     # blockSize = 512
@@ -91,10 +91,12 @@ class MultithreadDownloader:
             self.currentDownload[i] = dst.split('/')[-1].split('\\')[-1]
             tmpFilePath = ''
             try:
-                r = self.sess.get(src, timeout=50, stream=True) # timeout used to be 10
+                # timeout used to be 10
+                r = self.sess.get(src, timeout=50, stream=True)
                 tmpFilePath = f"{dst}.tmp.{int(time.time())}"
                 with open(tmpFilePath, 'wb') as fd:
-                    for chunk in r.iter_content(MultithreadDownloader.blockSize):
+                    for chunk in r.iter_content(
+                            MultithreadDownloader.blockSize):
                         self.tqdm.update(len(chunk))
                         fd.write(chunk)
                         if self.stopSignal:
@@ -170,9 +172,9 @@ class MultithreadDownloader:
             time.sleep(0.1)
         if self.tqdm:
             self.tqdm.close()
-        # if self.totalCnt > 0:
-        #     print("\r{:5d}/{:5d} Finish!        {}".format(
-        #         self.downloadedCnt, self.totalCnt, ' ' * 15))
+    # if self.totalCnt > 0:
+    #     print("\r{:5d}/{:5d} Finish!        {}".format(
+    #         self.downloadedCnt, self.totalCnt, ' ' * 15))
 
 
 class CanvasSyncer:
@@ -201,7 +203,7 @@ class CanvasSyncer:
         self.downloader = MultithreadDownloader(self.sess, MAX_DOWNLOAD_COUNT)
         if not os.path.exists(self.downloadDir):
             os.mkdir(self.downloadDir)
-            logger.info(f"Created new directory at {downloadDir}.")
+            logger.info(f"Created new directory at {self.downloadDir}.")
         logger.debug(f"CanvasSyncer.downloadDir = {self.downloadDir}")
 
     def sessGet(self, *args, **kwargs):
@@ -302,9 +304,11 @@ class CanvasSyncer:
             files = self.sessGet(url).json()
             if not files:
                 break
-            if type(files) is dict: break
+            if type(files) is dict:
+                break
             for f in files:
-                if f['folder_id'] not in folders.keys(): continue
+                if f['folder_id'] not in folders.keys():
+                    continue
                 # f['display_name'] = re.sub(r"[\/\\\:\*\?\"\<\>\|]", "_", f['display_name'])
                 f['display_name'] = process(f['display_name'])
                 path = f"{folders[f['folder_id']]}/{f['display_name']}"
@@ -350,12 +354,12 @@ class CanvasSyncer:
         return res
 
     def getCourseTaskInfo(self, courseID):
-        
+
         folders, files = self.getCourseFiles(courseID)
         self.createFolders(courseID, folders)
         localFiles = self.getLocalFiles(courseID, folders)
         res = []
-        
+
         for fileName, (fileUrl, fileModifiedTimeStamp) in files.items():
             if not fileUrl:
                 continue
@@ -365,7 +369,7 @@ class CanvasSyncer:
                 path = os.path.join(self.downloadDir,
                                     f"{self.courseCode[courseID]}{fileName}")
             path = path.replace('\\', '/').replace('//', '/')
-            
+
             if fileName in localFiles:
                 localCreatedTimeStamp = int(os.path.getctime(path))
                 if fileModifiedTimeStamp <= localCreatedTimeStamp:
@@ -375,33 +379,34 @@ class CanvasSyncer:
                 self.laterDownloadSize += fileSize
                 self.laterFiles.append((fileUrl, path))
                 self.laterInfo.append(
-                    f"{self.courseCode[courseID]}{fileName} ({round(fileSize / 2**20, 2)}MB)"
+                    f"{self.courseCode[courseID]}{fileName} ({round(fileSize / 2 ** 20, 2)}MB)"
                 )
                 continue
-            
+
             response = self.sessHead(fileUrl)
             fileSize = int(response.headers.get('content-length', 0))
-            if fileSize / 2**20 > self.config['filesizeThresh']:
+            if fileSize / 2 ** 20 > self.config['filesizeThresh']:
                 if not self.confirmAll:
                     print(
-                        f'\nTarget file: {self.courseCode[courseID]}{fileName} is too large ({round(fileSize / 2**20, 2)}MB), ignore?(Y/n) ',
+                        f'\nTarget file: {self.courseCode[courseID]}{fileName} is too large ({round(fileSize / 2 ** 20, 2)}MB), ignore?(Y/n) ',
                         end='')
                     isDownload = input()
                 else:
                     print(
-                        f'\nTarget file: {self.courseCode[courseID]}{fileName} is too large ({round(fileSize / 2**20, 2)}MB), ignore. '
+                        f'\nTarget file: {self.courseCode[courseID]}{fileName} is too large ({round(fileSize / 2 ** 20, 2)}MB), ignore. '
                     )
                     isDownload = 'Y'
-                
+
                 if isDownload not in ['n', 'N']:
-                    logger.warning(f"Ignoring file {self.courseCode[courseID]}{fileName} due to large size. Empty placeholder file created.")
+                    logger.warning(
+                        f"Ignoring file {self.courseCode[courseID]}{fileName} due to large size. Empty placeholder file created.")
                     print('Creating empty file as placeholder...')
                     open(path, 'w').close()
                     self.skipfiles.append(path)
                     continue
 
             self.newInfo.append(
-                f"{self.courseCode[courseID]}{fileName} ({round(fileSize / 2**20, 2)}MB)"
+                f"{self.courseCode[courseID]}{fileName} ({round(fileSize / 2 ** 20, 2)}MB)"
             )
             self.downloadSize += fileSize
             res.append((fileUrl, path))
@@ -415,34 +420,34 @@ class CanvasSyncer:
         for courseID in self.courseCode.keys():
             for info in self.getCourseTaskInfo(courseID):
                 allInfos.append(info)
-        
+
         if len(allInfos) == 0:
             print("\rAll local files are up to date!")
             logger.info("All files up to date.")
         else:
             print(f"\rFound {len(allInfos)} new file(s)!           ")
             logger.info("Found {len(allInfos)} new file(s)!")
-            
+
             if self.skipfiles:
                 print(
                     f"The following file(s) will not be synced due to their size (over {self.config['filesizeThresh']} MB):"
                 )
                 [print(f) for f in self.skipfiles]
                 logger.info(f"Skipped files {str(self.skipfiles)}")
-            
+
             print(
-                f"Start to download the following file(s), total size: {round(self.downloadSize / 2**20, 2)}MB"
+                f"Start to download the following file(s), total size: {round(self.downloadSize / 2 ** 20, 2)}MB"
             )
             [print(s) for s in self.newInfo]
-            logger.info(f"File downloading started. File(s) list: {str(self.newInfo)}")
-            
+            logger.info(
+                f"File downloading started. File(s) list: {str(self.newInfo)}")
+
             self.downloader.create(allInfos, self.downloadSize)
             self.downloader.start()
             self.downloader.waitTillFinish()
 
     def checkLaterFiles(self):
-
-        '''Check for new versions of existing files on Canvas'''
+        """Check for new versions of existing files on Canvas"""
 
         if not self.laterFiles:
             return
@@ -450,32 +455,32 @@ class CanvasSyncer:
         print("These file(s) have later version on Canvas:")
         [print(s) for s in self.laterInfo]
         logger.info(f"Found new versions for files {self.laterInfo}")
-        
+
         if not self.confirmAll:
             print('Update all?(Y/n) ', end='')
             isDownload = input()
         else:
             isDownload = 'Y'
-        
+
         if isDownload in ['n', 'N']:
             logger.info("Update aborted.")
             return
 
         print(
-            f"Start to download the following files, total size: {round(self.laterDownloadSize / 2**20, 2)}MB"
+            f"Start to download the following files, total size: {round(self.laterDownloadSize / 2 ** 20, 2)}MB"
         )
-        
+
         laterFiles = []
-        
+
         for (fileUrl, path) in self.laterFiles:
-            
+
             localCreatedTimeStamp = int(os.path.getctime(path))
-            
+
             try:
                 newPath = os.path.join(
                     ntpath.dirname(path),
                     f"{localCreatedTimeStamp}_{ntpath.basename(path)}")
-                
+
                 if not os.path.exists(newPath):
                     os.rename(path, newPath)
                 else:
@@ -483,18 +488,18 @@ class CanvasSyncer:
                         ntpath.dirname(path),
                         f"{int(time.time())}_{ntpath.basename(path)}")
                 laterFiles.append((fileUrl, path))
-            
+
             except Exception as e:
                 print(f"{e.__class__.__name__}! Skipped: {path}")
                 logger.error(f"{e.__class__.__name__}! Skipped: {path}")
-        
+
         self.downloader.create(laterFiles, self.laterDownloadSize)
         self.downloader.start()
         self.downloader.waitTillFinish()
 
     def sync(self):
-        '''Main function for checking for new or updated versions of files.'''
-        
+        """Main function for checking for new or updated versions of files."""
+
         print("\rGetting course IDs...", end='')
         self.courseCode = self.getCourseID()
         logger.info(f"CanvasSyncer.courseCode = {str(self.courseCode)}")
@@ -506,8 +511,7 @@ class CanvasSyncer:
 
 
 def initConfig():
-
-    '''Create new `.canvassyncer.json` file, with values to properties based on user input.'''
+    """Create new `.canvassyncer.json` file, with values to properties based on user input."""
 
     oldConfig = dict()
 
@@ -529,18 +533,18 @@ def initConfig():
     tipStr = f"(Default: {' '.join(oldConfig.get('courseCodes', list()))})" if oldConfig else ""
     courseCodes = input(
         f"Courses to sync in course codes(split with space){tipStr}:").strip(
-        ).split()
+    ).split()
     if not courseCodes:
         courseCodes = oldConfig.get('courseCodes', list())
-    
+
     tipStr = f"(Default: {' '.join([str(item) for item in oldConfig.get('courseIDs', list())])})" if oldConfig else ""
     courseIDs = input(
         f"Courses to sync in course ID(split with space){tipStr}:").strip(
-        ).split()
+    ).split()
     if not courseIDs:
         courseIDs = oldConfig.get('courseIDs', list())
     courseIDs = [int(courseID) for courseID in courseIDs]
-    
+
     tipStr = f"(Default: {oldConfig.get('downloadDir', os.path.abspath(''))})"
     downloadDir = input(f"Path to save Canvas files{tipStr}:").strip()
 
@@ -568,9 +572,8 @@ def initConfig():
 
 
 def run():
-
-    ''' I really do not know whether this separate `run()` function is needed, but 
-    I'd assume it's necessary for building a package and releasing it later on...'''
+    """ I really do not know whether this separate `run()` function is needed, but
+        I'd assume it's necessary for building a package and releasing it later on..."""
 
     Syncer, args = None, None
 
@@ -620,14 +623,15 @@ def run():
             except Exception as e:
                 print(
                     f"\nError: {e.__class__.__name__}. Failed to create or read config file.")
-                logger.critical("Failed to create or read config file", exc_info=True)
+                logger.critical("Failed to create or read config file",
+                                exc_info=True)
                 if args.debug:
                     print(traceback.format_exc())
                 exit(1)
 
             if args.r:
                 return
-        
+
         config = json.load(open(configPath, 'r', encoding='UTF-8'))
         config['y'] = args.y
         config['proxies'] = args.proxy

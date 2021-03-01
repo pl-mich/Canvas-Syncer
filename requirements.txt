@@ -1,2 +1,5 @@
-requests
-tqdm
+requests~=2.24.0
+tqdm~=4.47.0
+setuptools~=49.2.0
+canvassyncer~=1.2.10
+urllib3~=1.25.9
